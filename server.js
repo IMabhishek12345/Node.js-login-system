@@ -8,7 +8,7 @@ const bcrypt=require("bcrypt");
 const passport=require("passport");
 const flash=require("express-flash");
 const session=require("express-session");
-
+const methodOverride=require("method-override");
 const initializePassport=require("./passport-config");
 
 const users=[];//for holding different users data, if we are not 
@@ -36,6 +36,8 @@ app.use(express.urlencoded({extended: false}));//extended:false means
 //extended:true means it parse any incoming request object with nested objects etc.
 
 app.use(flash());
+
+
 //HTTP is stateless; in order to associate a request to any other request,
 //you need a way to store user data between HTTP requests. Cookies and URL
 //parameters are both suitable ways to transport data between the client 
@@ -52,24 +54,26 @@ app.use(session({
 
 app.use(passport.initialize());
 app.use(passport.session());
+app.use(methodOverride("_method"));
 
-app.get("/",(req,res)=>{
-    res.render("index.ejs",{name: "abhishek"})
+app.get("/",checkAuthenticated,(req,res)=>{
+    res.render("index.ejs",{name: req.user.name})
 })
-app.get("/register",(req,res)=>{
+app.get("/register",checkNotAuthenticated,(req,res)=>{
     res.render("register.ejs");
 })
-app.get("/login",(req,res)=>{
+app.get("/login",checkNotAuthenticated,(req,res)=>{
     res.render("login.ejs");
 })
 
-app.post("/login",passport.authenticate("local",{
+app.post("/login",checkNotAuthenticated,passport.authenticate("local",{
   successRedirect: "/",
   failureRedirect: "/login",
-  failureflash: true
+  failureFlash: true
   
 }))
-app.post("/register",async(req,res)=>{
+
+app.post("/register",checkNotAuthenticated,async(req,res)=>{
   try {
     const hashedPassword=await bcrypt.hash(req.body.password,10);
     users.push({
@@ -84,4 +88,24 @@ app.post("/register",async(req,res)=>{
   }
  console.log(users);
 })
+
+app.delete("/logout",(req,res,next)=>{
+    req.logOut((err)=> {
+        if (err) return next(err) 
+    res.redirect("/") 
+    })
+    
+})
+function checkAuthenticated(req,res,next){
+   if (req.isAuthenticated()){
+      return next();
+   }
+  res.redirect("/login");
+}
+function checkNotAuthenticated(req,res,next){
+    if (req.isAuthenticated()){
+       return res.redirect("/")
+    }
+   next() 
+ }
 app.listen(3000);

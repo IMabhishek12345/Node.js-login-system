@@ -5,7 +5,9 @@ const bcrypt=require("bcrypt");
 function initialize(passport,getUserByEmail,getUserbyId){
       const authenticateUser=async(email,password,done)=>{
       const user=getUserByEmail(email);
-      if(user=== null){
+      
+      console.log(user);
+      if(user==null){
       //In done(err,userexist,object):- err is the error in the server 
       return done(null,false,{message:"No user witn that email exists"});
       }
